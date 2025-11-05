@@ -42,6 +42,10 @@ const userSchema = new mongoose.Schema({
       lng: Number
     }
   },
+  lastLocationUpdate: {
+    type: Date,
+    default: Date.now
+  },
   profileImage: {
     type: String,
     default: null
@@ -70,6 +74,11 @@ const userSchema = new mongoose.Schema({
     type: Boolean,
     default: true
   },
+  isOnline: {
+    type: Boolean,
+    default: false
+  },
+  socketId: String,
   notifications: [{
     type: String,
     message: String,
@@ -79,6 +88,9 @@ const userSchema = new mongoose.Schema({
 }, {
   timestamps: true
 });
+
+// Index for geospatial queries
+userSchema.index({ 'address.coordinates': '2dsphere' });
 
 userSchema.pre('save', async function(next) {
   if (!this.isModified('password')) return next();

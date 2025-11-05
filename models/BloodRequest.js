@@ -30,6 +30,10 @@ const bloodRequestSchema = new mongoose.Schema({
     address: String,
     contact: String
   },
+  location: {
+    lat: Number,
+    lng: Number
+  },
   status: {
     type: String,
     enum: ['pending', 'matched', 'in-delivery', 'fulfilled', 'cancelled'],
@@ -44,7 +48,9 @@ const bloodRequestSchema = new mongoose.Schema({
       type: String,
       enum: ['pending', 'accepted', 'rejected'],
       default: 'pending'
-    }
+    },
+    distance: Number,
+    notifiedAt: Date
   }],
   fulfilledBy: [{
     type: mongoose.Schema.Types.ObjectId,
