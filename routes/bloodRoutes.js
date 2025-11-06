@@ -5,6 +5,7 @@ import {
   scheduleDonation,
   getDonationHistory,
   generateBloodCard,
+  getHeroes,
   getLeaderboard,
   getNearbyDonors,
   getNearbyBloodBanks,
@@ -20,7 +21,8 @@ router.get('/requests', protect, getBloodRequests);
 router.post('/donate', protect, authorize('donor'), scheduleDonation);
 router.get('/donations', protect, getDonationHistory);
 router.get('/card/:userId?', generateBloodCard);
-router.get('/leaderboard', getLeaderboard);
+router.get('/heroes', getHeroes); // New endpoint
+router.get('/leaderboard', getLeaderboard); // Keep for backward compatibility
 router.get('/nearby-donors', protect, getNearbyDonors);
 router.get('/nearby-bloodbanks', getNearbyBloodBanks);
 router.get('/live-users', protect, getLiveUsersInRange);

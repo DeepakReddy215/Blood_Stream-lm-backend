@@ -216,16 +216,17 @@ export const generateBloodCard = async (req, res) => {
   }
 };
 
-export const getLeaderboard = async (req, res) => {
+// Updated function name for Hall of Heroes
+export const getHeroes = async (req, res) => {
   try {
-    const topDonors = await User.find({ role: 'donor' })
+    const topHeroes = await User.find({ role: 'donor' })
       .sort('-donationCount')
-      .limit(10)
-      .select('name bloodType donationCount badgeLevel profileImage');
+      .limit(50) // Get more heroes for the honor roll
+      .select('name bloodType donationCount badgeLevel profileImage createdAt');
 
     res.json({
       success: true,
-      data: topDonors
+      data: topHeroes
     });
   } catch (error) {
     res.status(500).json({ 
@@ -234,6 +235,9 @@ export const getLeaderboard = async (req, res) => {
     });
   }
 };
+
+// Keep the old function for backward compatibility
+export const getLeaderboard = getHeroes;
 
 export const getNearbyDonors = async (req, res) => {
   try {
