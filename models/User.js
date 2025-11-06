@@ -26,7 +26,24 @@ const userSchema = new mongoose.Schema({
   bloodType: {
     type: String,
     enum: ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'],
-    required: function() { return this.role === 'donor' || this.role === 'recipient'; }
+    required: function() { 
+      return this.role === 'donor' || this.role === 'recipient'; 
+    },
+    // Only validate enum if bloodType is provided
+    validate: {
+      validator: function(value) {
+        // If no value provided and not required, it's valid
+        if (!value && (this.role === 'delivery' || this.role === 'admin')) {
+          return true;
+        }
+        // If value provided, check if it's in the enum
+        if (value) {
+          return ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'].includes(value);
+        }
+        return true;
+      },
+      message: props => `${props.value} is not a valid blood type`
+    }
   },
   phone: {
     type: String,
@@ -62,13 +79,29 @@ const userSchema = new mongoose.Schema({
   lastDonationDate: Date,
   eligibleToDonate: {
     type: Boolean,
-    default: true
+    default: function() {
+      return this.role === 'donor';
+    }
   },
   medicalInfo: {
     weight: Number,
     height: Number,
     diseases: [String],
     medications: [String]
+  },
+  // Delivery-specific fields
+  vehicleInfo: {
+    type: {
+      type: String,
+      enum: ['bike', 'car', 'van', 'ambulance']
+    },
+    number: String,
+    model: String
+  },
+  deliveryStats: {
+    totalDeliveries: { type: Number, default: 0 },
+    successfulDeliveries: { type: Number, default: 0 },
+    averageDeliveryTime: Number
   },
   isActive: {
     type: Boolean,
@@ -93,8 +126,16 @@ const userSchema = new mongoose.Schema({
 userSchema.index({ 'address.coordinates': '2dsphere' });
 
 userSchema.pre('save', async function(next) {
-  if (!this.isModified('password')) return next();
-  this.password = await bcrypt.hash(this.password, 10);
+  // Hash password if modified
+  if (this.isModified('password')) {
+    this.password = await bcrypt.hash(this.password, 10);
+  }
+  
+  // Remove bloodType if not needed
+  if ((this.role === 'delivery' || this.role === 'admin') && this.bloodType === '') {
+    this.bloodType = undefined;
+  }
+  
   next();
 });
 

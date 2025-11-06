@@ -20,16 +20,33 @@ export const register = async (req, res) => {
       });
     }
 
-    // Create user
-    const user = await User.create({
+    // Prepare user data
+    const userData = {
       name,
       email,
       password,
-      role,
-      bloodType,
+      role: role || 'donor',
       phone,
       address
-    });
+    };
+
+    // Only add bloodType if it's provided and role requires it
+    if (role === 'donor' || role === 'recipient') {
+      if (!bloodType) {
+        return res.status(400).json({
+          success: false,
+          message: 'Blood type is required for donors and recipients'
+        });
+      }
+      userData.bloodType = bloodType;
+    } else if (role === 'delivery' || role === 'admin') {
+      // Don't include bloodType for delivery and admin roles
+      // Even if it's sent as empty string from frontend
+      delete userData.bloodType;
+    }
+
+    // Create user
+    const user = await User.create(userData);
 
     if (user) {
       const token = generateToken(user._id);
@@ -46,6 +63,7 @@ export const register = async (req, res) => {
       });
     }
   } catch (error) {
+    console.error('Registration error:', error);
     res.status(500).json({ 
       success: false, 
       message: error.message 
@@ -117,9 +135,21 @@ export const getProfile = async (req, res) => {
 
 export const updateProfile = async (req, res) => {
   try {
+    const updates = { ...req.body };
+    
+    // Prevent changing critical fields
+    delete updates.email;
+    delete updates.role;
+    delete updates.password;
+    
+    // Handle bloodType update based on role
+    if (req.user.role === 'delivery' || req.user.role === 'admin') {
+      delete updates.bloodType;
+    }
+
     const user = await User.findByIdAndUpdate(
       req.user._id,
-      req.body,
+      updates,
       { new: true, runValidators: true }
     ).select('-password');
 
