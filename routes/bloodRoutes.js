@@ -8,7 +8,8 @@ import {
   getLeaderboard,
   getNearbyDonors,
   getNearbyBloodBanks,
-  updateLocation
+  updateLocation,
+  getLiveUsersInRange
 } from '../controllers/bloodController.js';
 import { protect, authorize } from '../middleware/auth.js';
 
@@ -22,6 +23,7 @@ router.get('/card/:userId?', generateBloodCard);
 router.get('/leaderboard', getLeaderboard);
 router.get('/nearby-donors', protect, getNearbyDonors);
 router.get('/nearby-bloodbanks', getNearbyBloodBanks);
+router.get('/live-users', protect, getLiveUsersInRange);
 router.put('/update-location', protect, updateLocation);
 
 export default router;

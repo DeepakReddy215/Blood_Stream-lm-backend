@@ -346,29 +346,125 @@ export const getNearbyBloodBanks = async (req, res) => {
 
 export const updateLocation = async (req, res) => {
   try {
-    const { lat, lng } = req.body;
+    const { lat, lng, isOnline = true } = req.body;
     
     const user = await User.findByIdAndUpdate(
       req.user._id,
       {
         'address.coordinates': { lat, lng },
-        lastLocationUpdate: new Date()
+        lastLocationUpdate: new Date(),
+        isOnline
       },
       { new: true }
     ).select('-password');
 
-    // Emit location update to all connected users
+    // Only emit to users within range (50km default)
     const io = req.app.get('io');
-    io.emit('user-location-updated', {
-      userId: user._id,
-      coordinates: { lat, lng },
-      role: user.role,
-      bloodType: user.bloodType
+    
+    // Find users within broadcast range
+    const nearbyUsers = await User.find({
+      isOnline: true,
+      'address.coordinates.lat': { $exists: true },
+      _id: { $ne: req.user._id }
+    }).select('_id address socketId');
+
+    // Broadcast only to nearby users
+    nearbyUsers.forEach(nearbyUser => {
+      if (nearbyUser.address?.coordinates) {
+        const distance = calculateDistance(
+          lat,
+          lng,
+          nearbyUser.address.coordinates.lat,
+          nearbyUser.address.coordinates.lng
+        );
+        
+        // Only broadcast to users within 50km
+        if (distance <= 50 && nearbyUser.socketId) {
+          io.to(nearbyUser.socketId).emit('user-location-updated', {
+            userId: user._id,
+            coordinates: { lat, lng },
+            role: user.role,
+            bloodType: user.bloodType,
+            distance: Math.round(distance * 10) / 10
+          });
+        }
+      }
     });
 
     res.json({
       success: true,
       data: user
+    });
+  } catch (error) {
+    res.status(500).json({ 
+      success: false, 
+      message: error.message 
+    });
+  }
+};
+
+export const getLiveUsersInRange = async (req, res) => {
+  try {
+    const { lat, lng, radius = 25, role, bloodType } = req.query;
+
+    if (!lat || !lng) {
+      return res.status(400).json({
+        success: false,
+        message: 'Location coordinates required'
+      });
+    }
+
+    // Build query filters
+    const filter = {
+      isOnline: true,
+      'address.coordinates.lat': { $exists: true },
+      _id: { $ne: req.user._id } // Exclude self
+    };
+
+    if (role) filter.role = role;
+    if (bloodType) {
+      // If searching for donors, get compatible types
+      if (role === 'donor') {
+        filter.bloodType = { $in: getCompatibleBloodTypes(bloodType) };
+      } else {
+        filter.bloodType = bloodType;
+      }
+    }
+
+    // Find users with recent location updates (within last 5 minutes)
+    const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
+    filter.lastLocationUpdate = { $gte: fiveMinutesAgo };
+
+    const users = await User.find(filter)
+      .select('name role bloodType address badgeLevel donationCount profileImage lastLocationUpdate')
+      .limit(100); // Limit results for performance
+
+    // Filter by distance
+    const usersInRange = users
+      .map(user => {
+        const distance = calculateDistance(
+          parseFloat(lat),
+          parseFloat(lng),
+          user.address.coordinates.lat,
+          user.address.coordinates.lng
+        );
+        
+        return {
+          ...user.toObject(),
+          distance: Math.round(distance * 10) / 10,
+          isLive: true,
+          lastSeen: user.lastLocationUpdate
+        };
+      })
+      .filter(user => user.distance <= parseFloat(radius))
+      .sort((a, b) => a.distance - b.distance)
+      .slice(0, 50); // Maximum 50 users to display
+
+    res.json({
+      success: true,
+      data: usersInRange,
+      count: usersInRange.length,
+      searchRadius: parseFloat(radius)
     });
   } catch (error) {
     res.status(500).json({ 
