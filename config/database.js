@@ -11,6 +11,22 @@ const MAX_RETRIES = 3;
 const RETRY_DELAY = 5000;
 
 /**
+ * List of error types that should trigger a retry attempt
+ */
+const RETRYABLE_ERROR_TYPES = [
+  'MongoNetworkError',
+  'MongoServerSelectionError'
+];
+
+/**
+ * List of error message patterns that indicate retryable errors
+ */
+const RETRYABLE_ERROR_MESSAGES = [
+  'ECONNREFUSED',
+  'ETIMEDOUT'
+];
+
+/**
  * Connects to MongoDB with retry logic and connection event monitoring
  * 
  * This function attempts to establish a connection to MongoDB with automatic
@@ -49,10 +65,8 @@ const connectDB = async () => {
       
       // Check if this is a network/connection error that might be temporary
       const isRetryableError = 
-        error.name === 'MongoNetworkError' ||
-        error.name === 'MongoServerSelectionError' ||
-        error.message.includes('ECONNREFUSED') ||
-        error.message.includes('ETIMEDOUT');
+        RETRYABLE_ERROR_TYPES.includes(error.name) ||
+        RETRYABLE_ERROR_MESSAGES.some(msg => error.message.includes(msg));
       
       retryCount++;
       

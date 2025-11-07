@@ -17,6 +17,11 @@ const requiredEnvVars = [
 ];
 
 /**
+ * Minimum recommended length for JWT_SECRET for security
+ */
+const MIN_JWT_SECRET_LENGTH = 32;
+
+/**
  * Validates that all required environment variables are present and non-empty
  * 
  * @throws {Error} If any required environment variable is missing or empty
@@ -68,8 +73,8 @@ export const validateEnv = () => {
   }
   
   // Additional validation: Check JWT_SECRET length (should be reasonably long for security)
-  if (process.env.JWT_SECRET && process.env.JWT_SECRET.length < 32) {
-    console.warn('⚠️  WARNING: JWT_SECRET is shorter than recommended (32 characters). Consider using a longer secret for better security.');
+  if (process.env.JWT_SECRET && process.env.JWT_SECRET.length < MIN_JWT_SECRET_LENGTH) {
+    console.warn(`⚠️  WARNING: JWT_SECRET is shorter than recommended (${MIN_JWT_SECRET_LENGTH} characters). Consider using a longer secret for better security.`);
   }
   
   // Additional validation: Check if MONGODB_URI looks like a valid MongoDB connection string
