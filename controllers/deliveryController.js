@@ -103,10 +103,12 @@ export const acceptDelivery = async (req, res) => {
 
       // Emit socket event
       const io = req.app.get('io');
-      io.emit('delivery-accepted', {
-        delivery,
-        deliveryPerson: req.user.name
-      });
+      if (io) {
+        io.emit('delivery-accepted', {
+          delivery,
+          deliveryPerson: req.user.name
+        });
+      }
 
       res.status(201).json({
         success: true,
@@ -132,7 +134,13 @@ export const getAssignedDeliveries = async (req, res) => {
     const deliveries = await Delivery.find({ 
       deliveryPerson: req.user._id 
     })
-      .populate('bloodRequest')
+      .populate({
+        path: 'bloodRequest',
+        populate: {
+          path: 'recipient',
+          select: 'name phone address'
+        }
+      })
       .sort('-createdAt');
 
     res.json({
@@ -182,17 +190,24 @@ export const updateDeliveryStatus = async (req, res) => {
       await BloodRequest.findByIdAndUpdate(delivery.bloodRequest, {
         status: 'fulfilled'
       });
+
+      // Update delivery person successful deliveries
+      await User.findByIdAndUpdate(req.user._id, {
+        $inc: { 'deliveryStats.successfulDeliveries': 1 }
+      });
     }
 
     await delivery.save();
 
     // Emit real-time update
     const io = req.app.get('io');
-    io.emit('delivery-updated', {
-      deliveryId: delivery._id,
-      status: delivery.status,
-      location
-    });
+    if (io) {
+      io.emit('delivery-updated', {
+        deliveryId: delivery._id,
+        status: delivery.status,
+        location
+      });
+    }
 
     res.json({
       success: true,
