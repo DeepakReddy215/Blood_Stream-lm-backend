@@ -113,6 +113,13 @@ export const getCompatibleRequests = async (req, res) => {
   try {
     const donor = await User.findById(req.user._id);
     
+    if (!donor.bloodType) {
+      return res.status(400).json({
+        success: false,
+        message: 'Please update your blood type in your profile to see compatible requests'
+      });
+    }
+    
     const canDonateTo = {
       'O-': ['O-', 'O+', 'A-', 'A+', 'B-', 'B+', 'AB-', 'AB+'],
       'O+': ['O+', 'A+', 'B+', 'AB+'],
@@ -133,7 +140,7 @@ export const getCompatibleRequests = async (req, res) => {
     })
     .populate('recipient', 'name phone')
     .populate('matchedDonors.donor', 'name')
-    .sort({ urgency: 1, createdAt: -1 });
+    .sort({ urgency: -1, createdAt: -1 }); // -1 for descending (critical first)
 
     res.json({
       success: true,
