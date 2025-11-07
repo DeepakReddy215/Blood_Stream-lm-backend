@@ -4,6 +4,7 @@ import dotenv from 'dotenv';
 import helmet from 'helmet';
 import { createServer } from 'http';
 import { Server } from 'socket.io';
+import mongoose from 'mongoose';
 import connectDB, { setupConnectionListeners } from './config/database.js';
 import authRoutes from './routes/authRoutes.js';
 import bloodRoutes from './routes/bloodRoutes.js';
@@ -97,7 +98,6 @@ const gracefulShutdown = async (signal) => {
     
     try {
       // Close MongoDB connection
-      const mongoose = (await import('mongoose')).default;
       await mongoose.connection.close();
       console.log('📴 MongoDB connection closed');
       
@@ -126,12 +126,14 @@ process.on('SIGINT', () => gracefulShutdown('SIGINT'));
 process.on('uncaughtException', (error) => {
   console.error('💥 Uncaught Exception:', error.message);
   console.error(error.stack);
-  gracefulShutdown('UNCAUGHT_EXCEPTION');
+  // For uncaught exceptions, exit immediately as the process state is unstable
+  process.exit(1);
 });
 
 // Handle unhandled promise rejections
 process.on('unhandledRejection', (reason, promise) => {
   console.error('💥 Unhandled Rejection at:', promise);
   console.error('Reason:', reason);
-  gracefulShutdown('UNHANDLED_REJECTION');
+  // For unhandled rejections, exit immediately as the process state may be unstable
+  process.exit(1);
 });

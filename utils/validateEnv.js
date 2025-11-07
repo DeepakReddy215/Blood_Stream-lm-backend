@@ -32,10 +32,10 @@ export const validateEnv = () => {
   for (const varName of requiredEnvVars) {
     const value = process.env[varName];
     
-    if (value === undefined) {
+    if (value === undefined || value === null) {
       // Variable is not defined at all
       missingVars.push(varName);
-    } else if (value.trim() === '') {
+    } else if (typeof value === 'string' && value.trim() === '') {
       // Variable is defined but empty
       emptyVars.push(varName);
     }
@@ -68,12 +68,12 @@ export const validateEnv = () => {
   }
   
   // Additional validation: Check JWT_SECRET length (should be reasonably long for security)
-  if (process.env.JWT_SECRET.length < 32) {
+  if (process.env.JWT_SECRET && process.env.JWT_SECRET.length < 32) {
     console.warn('⚠️  WARNING: JWT_SECRET is shorter than recommended (32 characters). Consider using a longer secret for better security.');
   }
   
   // Additional validation: Check if MONGODB_URI looks like a valid MongoDB connection string
-  if (!process.env.MONGODB_URI.startsWith('mongodb://') && !process.env.MONGODB_URI.startsWith('mongodb+srv://')) {
+  if (process.env.MONGODB_URI && !process.env.MONGODB_URI.startsWith('mongodb://') && !process.env.MONGODB_URI.startsWith('mongodb+srv://')) {
     console.warn('⚠️  WARNING: MONGODB_URI does not appear to be a valid MongoDB connection string.');
   }
   
