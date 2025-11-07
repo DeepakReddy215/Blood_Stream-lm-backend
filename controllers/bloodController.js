@@ -16,21 +16,6 @@ const calculateDistance = (lat1, lon1, lat2, lon2) => {
   return R * c; // Distance in km
 };
 
-// Get compatible blood types for receiving
-const getCompatibleDonorTypes = (recipientType) => {
-  const compatibility = {
-    'O-': ['O-'],
-    'O+': ['O-', 'O+'],
-    'A-': ['O-', 'A-'],
-    'A+': ['O-', 'O+', 'A-', 'A+'],
-    'B-': ['O-', 'B-'],
-    'B+': ['O-', 'O+', 'B-', 'B+'],
-    'AB-': ['O-', 'A-', 'B-', 'AB-'],
-    'AB+': ['O-', 'O+', 'A-', 'A+', 'B-', 'B+', 'AB-', 'AB+']
-  };
-  return compatibility[recipientType] || [];
-};
-
 // Get compatible blood types for donation
 const getCompatibleBloodTypes = (bloodType) => {
   const compatibility = {
@@ -123,38 +108,11 @@ export const createBloodRequest = async (req, res) => {
   }
 };
 
-export const getBloodRequests = async (req, res) => {
-  try {
-    const { status, bloodType, urgency } = req.query;
-    const filter = {};
-    
-    if (status) filter.status = status;
-    if (bloodType) filter.bloodType = bloodType;
-    if (urgency) filter.urgency = urgency;
-
-    const requests = await BloodRequest.find(filter)
-      .populate('recipient', 'name email phone')
-      .populate('matchedDonors.donor', 'name bloodType phone')
-      .sort('-createdAt');
-
-    res.json({
-      success: true,
-      data: requests
-    });
-  } catch (error) {
-    res.status(500).json({ 
-      success: false, 
-      message: error.message 
-    });
-  }
-};
-
-// Get compatible blood requests for a donor
+// Get compatible blood requests for donor
 export const getCompatibleRequests = async (req, res) => {
   try {
     const donor = await User.findById(req.user._id);
     
-    // Get blood types this donor can donate to
     const canDonateTo = {
       'O-': ['O-', 'O+', 'A-', 'A+', 'B-', 'B+', 'AB-', 'AB+'],
       'O+': ['O+', 'A+', 'B+', 'AB+'],
@@ -168,7 +126,6 @@ export const getCompatibleRequests = async (req, res) => {
 
     const compatibleBloodTypes = canDonateTo[donor.bloodType] || [];
 
-    // Find requests that match
     const requests = await BloodRequest.find({
       bloodType: { $in: compatibleBloodTypes },
       status: { $in: ['pending', 'matched'] },
@@ -176,7 +133,7 @@ export const getCompatibleRequests = async (req, res) => {
     })
     .populate('recipient', 'name phone')
     .populate('matchedDonors.donor', 'name')
-    .sort({ urgency: 1, createdAt: -1 }); // Sort by urgency then by newest
+    .sort({ urgency: 1, createdAt: -1 });
 
     res.json({
       success: true,
@@ -206,7 +163,6 @@ export const acceptBloodRequest = async (req, res) => {
       });
     }
 
-    // Check if donor already responded
     const donorMatch = bloodRequest.matchedDonors.find(
       m => m.donor.toString() === donorId.toString()
     );
@@ -218,7 +174,6 @@ export const acceptBloodRequest = async (req, res) => {
       });
     }
 
-    // Update or add donor match status
     if (donorMatch) {
       donorMatch.status = 'accepted';
       donorMatch.respondedAt = new Date();
@@ -230,17 +185,15 @@ export const acceptBloodRequest = async (req, res) => {
       });
     }
 
-    // Update request status if first acceptance
     if (bloodRequest.status === 'pending') {
       bloodRequest.status = 'matched';
     }
 
     await bloodRequest.save();
 
-    // Create donation appointment for tomorrow
     const tomorrow = new Date();
     tomorrow.setDate(tomorrow.getDate() + 1);
-    tomorrow.setHours(10, 0, 0, 0); // Set to 10 AM
+    tomorrow.setHours(10, 0, 0, 0);
 
     const donation = await Donation.create({
       donor: donorId,
@@ -254,20 +207,12 @@ export const acceptBloodRequest = async (req, res) => {
       status: 'scheduled'
     });
 
-    // Update donor's last donation date (will be updated again when actually donated)
-    await User.findByIdAndUpdate(donorId, {
-      lastScheduledDonation: tomorrow
-    });
-
-    // Notify recipient via Socket.IO
     const io = req.app.get('io');
-    if (io) {
-      io.to(`user-${bloodRequest.recipient._id}`).emit('donor-accepted', {
-        donorName: req.user.name,
-        requestId: requestId,
-        message: `Good news! A donor has accepted your blood request.`
-      });
-    }
+    io.to(`user-${bloodRequest.recipient._id}`).emit('donor-accepted', {
+      donorName: req.user.name,
+      requestId: requestId,
+      message: `Good news! A donor has accepted your blood request.`
+    });
 
     res.json({
       success: true,
@@ -301,7 +246,6 @@ export const declineBloodRequest = async (req, res) => {
       });
     }
 
-    // Find and update donor match status
     const donorMatch = bloodRequest.matchedDonors.find(
       m => m.donor.toString() === donorId.toString()
     );
@@ -322,6 +266,31 @@ export const declineBloodRequest = async (req, res) => {
     res.json({
       success: true,
       message: 'Blood request declined'
+    });
+  } catch (error) {
+    res.status(500).json({ 
+      success: false, 
+      message: error.message 
+    });
+  }
+};
+
+export const getBloodRequests = async (req, res) => {
+  try {
+    const { status, bloodType, urgency } = req.query;
+    const filter = {};
+    
+    if (status) filter.status = status;
+    if (bloodType) filter.bloodType = bloodType;
+    if (urgency) filter.urgency = urgency;
+
+    const requests = await BloodRequest.find(filter)
+      .populate('recipient', 'name email phone')
+      .sort('-createdAt');
+
+    res.json({
+      success: true,
+      data: requests
     });
   } catch (error) {
     res.status(500).json({ 

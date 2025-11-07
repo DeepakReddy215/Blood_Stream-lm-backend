@@ -46,11 +46,12 @@ const bloodRequestSchema = new mongoose.Schema({
     },
     status: {
       type: String,
-      enum: ['pending', 'accepted', 'rejected'],
+      enum: ['pending', 'accepted', 'rejected', 'declined'],
       default: 'pending'
     },
     distance: Number,
-    notifiedAt: Date
+    notifiedAt: Date,
+    respondedAt: Date
   }],
   fulfilledBy: [{
     type: mongoose.Schema.Types.ObjectId,
