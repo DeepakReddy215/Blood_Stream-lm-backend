@@ -161,6 +161,69 @@ export const scheduleDonation = async (req, res) => {
   }
 };
 
+export const respondToBloodRequest = async (req, res) => {
+  try {
+    const { requestId } = req.params;
+    const { response } = req.body; // 'accept' or 'decline'
+
+    const bloodRequest = await BloodRequest.findById(requestId);
+    
+    if (!bloodRequest) {
+      return res.status(404).json({
+        success: false,
+        message: 'Blood request not found'
+      });
+    }
+
+    // Find the donor in matchedDonors
+    const donorIndex = bloodRequest.matchedDonors.findIndex(
+      md => md.donor.toString() === req.user._id.toString()
+    );
+
+    if (donorIndex === -1) {
+      return res.status(400).json({
+        success: false,
+        message: 'You are not matched for this request'
+      });
+    }
+
+    // Update the donor's response status
+    bloodRequest.matchedDonors[donorIndex].status = response === 'accept' ? 'accepted' : 'declined';
+    await bloodRequest.save();
+
+    // If accepted, create a donation record
+    if (response === 'accept') {
+      await Donation.create({
+        donor: req.user._id,
+        bloodRequest: bloodRequest._id,
+        scheduledDate: new Date(Date.now() + 24 * 60 * 60 * 1000), // Schedule for next day
+        status: 'scheduled'
+      });
+
+      // Notify recipient via Socket.IO
+      const io = req.app.get('io');
+      if (io) {
+        io.to(`user-${bloodRequest.recipient}`).emit('donor-responded', {
+          request: bloodRequest,
+          donor: req.user.name,
+          response: 'accepted'
+        });
+      }
+    }
+
+    res.json({
+      success: true,
+      message: response === 'accept' ? 'Request accepted successfully!' : 'Request declined',
+      data: bloodRequest
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
+  }
+};
+
 export const getDonationHistory = async (req, res) => {
   try {
     const donations = await Donation.find({ donor: req.user._id })

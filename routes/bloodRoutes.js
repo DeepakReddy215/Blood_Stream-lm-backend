@@ -3,6 +3,7 @@ import {
   createBloodRequest,
   getBloodRequests,
   scheduleDonation,
+  respondToBloodRequest,
   getDonationHistory,
   generateBloodCard,
   getHeroes,
@@ -19,6 +20,7 @@ const router = express.Router();
 router.post('/request', protect, authorize('recipient'), createBloodRequest);
 router.get('/requests', protect, getBloodRequests);
 router.post('/donate', protect, authorize('donor'), scheduleDonation);
+router.post('/respond/:requestId', protect, authorize('donor'), respondToBloodRequest);
 router.get('/donations', protect, getDonationHistory);
 router.get('/card/:userId?', generateBloodCard);
 router.get('/heroes', getHeroes); // New endpoint
