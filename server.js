@@ -10,6 +10,7 @@ import authRoutes from './routes/authRoutes.js';
 import bloodRoutes from './routes/bloodRoutes.js';
 import deliveryRoutes from './routes/deliveryRoutes.js';
 import adminRoutes from './routes/adminRoutes.js';
+import bloodDriveRoutes from './routes/bloodDriveRoutes.js';
 import errorHandler from './middleware/errorHandler.js';
 import { setupSocketHandlers } from './config/socket.js';
 import validateEnv from './utils/validateEnv.js';
@@ -58,6 +59,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/blood', bloodRoutes);
 app.use('/api/delivery', deliveryRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/blood-drives', bloodDriveRoutes);
 
 // Health check
 app.get('/health', (req, res) => {
