@@ -84,8 +84,8 @@ export const validateEnv = () => {
   }
   
   console.log('✅ All required environment variables are present and valid');
-  console.log(`   - JWT_SECRET: ${process.env.JWT_SECRET.substring(0, 8)}... (${process.env.JWT_SECRET.length} chars)`);
-  console.log(`   - MONGODB_URI: ${process.env.MONGODB_URI.substring(0, 20)}...`);
+  console.log(`   - JWT_SECRET: [REDACTED] (${process.env.JWT_SECRET.length} chars)`);
+  console.log(`   - MONGODB_URI: [REDACTED]`);
   console.log(`   - PORT: ${process.env.PORT}`);
   console.log(`   - CLIENT_URL: ${process.env.CLIENT_URL}`);
   console.log('');
