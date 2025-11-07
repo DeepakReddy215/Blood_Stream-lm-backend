@@ -84,9 +84,7 @@ export const validateEnv = () => {
   }
   
   console.log('✅ All required environment variables are present and valid');
-  // Store length without exposing sensitive data
-  const jwtSecretLength = process.env.JWT_SECRET ? process.env.JWT_SECRET.length : 0;
-  console.log(`   - JWT_SECRET: [REDACTED] (${jwtSecretLength} chars)`);
+  console.log(`   - JWT_SECRET: [REDACTED]`);
   console.log(`   - MONGODB_URI: [REDACTED]`);
   console.log(`   - PORT: ${process.env.PORT}`);
   console.log(`   - CLIENT_URL: ${process.env.CLIENT_URL}`);
